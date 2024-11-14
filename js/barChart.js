@@ -9,21 +9,22 @@ const svg = d3.select("svg")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
 // Load CSV data
-   d3.csv("js/data/HM_all_stores.csv").then(data => {
+d3.csv("js/data/HM_all_stores.csv").then(data => {
     console.log("Data loaded:", data);
-}).catch(error => {
-    console.error("Error loading CSV:", error);
-});
 
+    // Convert numeric data
+    data.forEach(d => {
+        d.Sales = +d.Sales; // Ensure Sales is a number
+    });
 
     // Set scales
     const x = d3.scaleBand()
-        .domain(data.map(d => d.Store))
+        .domain(data.map(d => d.Store)) // Use the correct field name for your data
         .range([0, width])
         .padding(0.2);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.Sales)])
+        .domain([0, d3.max(data, d => d.Sales)]) // Find max Sales value
         .range([height, 0]);
 
     // Add axes
@@ -62,7 +63,6 @@ const svg = d3.select("svg")
         .on("mouseout", (event, d) => {
             d3.select(event.target).attr("fill", "steelblue");
         });
-
 }).catch(error => {
     console.error("Error loading CSV:", error);
 });
