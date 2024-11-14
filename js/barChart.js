@@ -11,9 +11,9 @@ const svg = d3.select("svg")
 // Load CSV data
    d3.csv("js/data/HM_all_stores.csv").then(data => {
     console.log("Data loaded:", data);
-  }).catch(error => {
+}).catch(error => {
     console.error("Error loading CSV:", error);
-  });
+});
 
 
     // Set scales
