@@ -9,11 +9,12 @@ const svg = d3.select("svg")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
 // Load CSV data
-d3.csv("data/HM_all_stores.csv").then(data => {
-    // Parse data
-    data.forEach(d => {
-        d.Sales = +d.Sales; // Convert sales to a number
-    });
+   d3.csv("js/data/HM_all_stores.csv").then(data => {
+    console.log("Data loaded:", data);
+  }).catch(error => {
+    console.error("Error loading CSV:", error);
+  });
+
 
     // Set scales
     const x = d3.scaleBand()
