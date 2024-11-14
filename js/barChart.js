@@ -3,16 +3,16 @@ const margin = { top: 40, right: 20, bottom: 50, left: 70 },
       width = 800 - margin.left - margin.right,
       height = 500 - margin.top - margin.bottom;
 
-// Append SVG
+// Append SVG group element
 const svg = d3.select("svg")
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
 // Load CSV data
 d3.csv("data/HM_all_stores.csv").then(data => {
-    // Convert sales to numbers
+    // Parse data
     data.forEach(d => {
-        d.Sales = +d.Sales;
+        d.Sales = +d.Sales; // Convert sales to a number
     });
 
     // Set scales
@@ -37,21 +37,31 @@ d3.csv("data/HM_all_stores.csv").then(data => {
         .call(d3.axisLeft(y));
 
     // Add bars
-    svg.selectAll(".bar")
+    const bars = svg.selectAll(".bar")
         .data(data)
         .enter()
         .append("rect")
         .attr("class", "bar")
         .attr("x", d => x(d.Store))
-        .attr("y", d => y(d.Sales))
         .attr("width", x.bandwidth())
+        .attr("y", height) // Start bars at the bottom for animation
+        .attr("height", 0) // Set initial height to 0 for animation
+        .attr("fill", "steelblue");
+
+    // Add animation (transitions)
+    bars.transition()
+        .duration(800) // 800ms animation
         .attr("height", d => height - y(d.Sales))
-        .on("mouseover", (event, d) => {
+        .attr("y", d => y(d.Sales));
+
+    // Add interactivity
+    bars.on("mouseover", (event, d) => {
             d3.select(event.target).attr("fill", "orange");
         })
         .on("mouseout", (event, d) => {
             d3.select(event.target).attr("fill", "steelblue");
         });
+
 }).catch(error => {
-    console.error("Error loading data: ", error);
+    console.error("Error loading CSV:", error);
 });
