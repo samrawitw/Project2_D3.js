@@ -1,4 +1,3 @@
-
 // Set SVG dimensions
 const margin = { top: 40, right: 20, bottom: 50, left: 70 },
       width = 800 - margin.left - margin.right,
@@ -13,8 +12,8 @@ const svg = d3.select("svg")
 d3.csv("js/data/HM_all_stores.csv").then(data => {
     console.log("Data loaded:", data);
 
-    // Filter out rows with missing or undefined `storeClass`
-    const filteredData = data.filter(d => d.storeClass);
+    // Filter out invalid values and the `F` class
+    const filteredData = data.filter(d => d.storeClass && d.storeClass.trim() !== "F");
 
     // Group data by `storeClass` and count the number of stores in each class
     const groupedData = d3.rollups(
@@ -29,7 +28,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
     const x = d3.scaleBand()
         .domain(groupedData.map(d => d.storeClass)) // Store classes for x-axis
         .range([0, width])
-        .padding(0.2);
+        .padding(0.3); // Increase padding for spacing
 
     const y = d3.scaleLinear()
         .domain([0, d3.max(groupedData, d => d.count)]) // Max count for y-axis
@@ -44,7 +43,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .style("text-anchor", "end");
 
     svg.append("g")
-        .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y).ticks(5)); // Reduce ticks for readability
 
     // Add bars
     const bars = svg.selectAll(".bar")
@@ -71,7 +70,24 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .on("mouseout", (event, d) => {
             d3.select(event.target).attr("fill", "steelblue");
         });
+
+    // Add X-axis label
+    svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", height + margin.bottom - 5)
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .text("Store Classes");
+
+    // Add Y-axis label
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -margin.left + 20)
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .text("Number of Stores");
 }).catch(error => {
     console.error("Error loading CSV:", error);
 });
-J
+
