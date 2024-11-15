@@ -1,5 +1,5 @@
 // Set SVG dimensions
-const margin = { top: 40, right: 150, bottom: 70, left: 70 },
+const margin = { top: 50, right: 200, bottom: 70, left: 70 },
       width = 800 - margin.left - margin.right,
       height = 500 - margin.top - margin.bottom;
 
@@ -8,34 +8,56 @@ const svg = d3.select("svg")
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-// Color scale
+// Color scale for store classes
 const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+// Tooltip setup
+const tooltip = d3.select("body")
+    .append("div")
+    .style("position", "absolute")
+    .style("background-color", "white")
+    .style("border", "1px solid #ccc")
+    .style("padding", "10px")
+    .style("border-radius", "5px")
+    .style("visibility", "hidden")
+    .style("font-size", "12px");
 
 // Load CSV data
 d3.csv("js/data/HM_all_stores.csv").then(data => {
     console.log("Data loaded:", data);
 
-    // Filter out invalid values and the `F` class
-    const filteredData = data.filter(d => d.storeClass && d.storeClass.trim() !== "F");
-    console.log("Filtered Data:", filteredData);
+    // Group data by city and count the number of stores per class in each city
+    const groupedData = d3.groups(data, d => d.city)
+        .map(([city, stores]) => ({
+            city,
+            counts: d3.rollups(
+                stores,
+                v => v.length, // Count stores
+                d => d.storeClass // Group by storeClass
+            ).map(([storeClass, count]) => ({ storeClass, count }))
+        }));
 
-    // Group data by `storeClass` and count the number of stores in each class
-    const groupedData = d3.rollups(
-        filteredData,
-        v => v.length,           // Count the number of entries per class
-        d => d.storeClass        // Group by `storeClass`
-    ).map(([storeClass, count]) => ({ storeClass, count })); // Convert to array of objects
+    console.log("Grouped Data by City:", groupedData);
 
-    console.log("Grouped Data:", groupedData);
+    // Flatten data for stacking
+    const flattenedData = groupedData.map(d => ({
+        city: d.city,
+        ...Object.fromEntries(d.counts.map(c => [c.storeClass, c.count]))
+    }));
+
+    console.log("Flattened Data:", flattenedData);
+
+    // Get all unique store classes
+    const classes = Array.from(new Set(data.map(d => d.storeClass)));
 
     // Set scales
     const x = d3.scaleBand()
-        .domain(groupedData.map(d => d.storeClass)) // Store classes for x-axis
+        .domain(flattenedData.map(d => d.city)) // Cities for x-axis
         .range([0, width])
         .padding(0.3);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(groupedData, d => d.count) + 50]) // Max count for y-axis, with padding
+        .domain([0, d3.max(flattenedData, d => d3.sum(classes.map(c => d[c] || 0)))]) // Sum of all classes
         .range([height, 0]);
 
     // Add axes
@@ -55,7 +77,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .attr("y", height + margin.bottom - 20)
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
-        .text("Store Classes");
+        .text("Cities");
 
     // Add Y-axis label
     svg.append("text")
@@ -66,69 +88,55 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .style("font-size", "14px")
         .text("Number of Stores");
 
-    // Add bars
-    const bars = svg.selectAll(".bar")
-        .data(groupedData)
+    // Add stacked bars
+    const barGroups = svg.selectAll(".bar-group")
+        .data(flattenedData)
         .enter()
-        .append("rect")
-        .attr("class", "bar")
-        .attr("x", d => x(d.storeClass))
-        .attr("width", x.bandwidth())
-        .attr("y", height) // Start bars at the bottom for animation
-        .attr("height", 0) // Set initial height to 0 for animation
-        .attr("fill", d => color(d.storeClass));
+        .append("g")
+        .attr("transform", d => `translate(${x(d.city)}, 0)`);
 
-    // Add bar labels
-    const labels = svg.selectAll(".label")
-        .data(groupedData)
-        .enter()
-        .append("text")
-        .attr("class", "label")
-        .attr("x", d => x(d.storeClass) + x.bandwidth() / 2)
-        .attr("y", d => y(d.count) - 5) // Slightly above the bar
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .text(d => d.count)
-        .style("opacity", 0); // Initially hidden for animation
-
-    // Add animation (transitions)
-    bars.transition()
-        .duration(800) // 800ms animation
-        .attr("height", d => height - y(d.count))
-        .attr("y", d => y(d.count))
-        .on("end", () => {
-            labels.transition()
-                .duration(300)
-                .style("opacity", 1); // Show labels after animation
-        });
-
-    // Add interactivity
-    bars.on("mouseover", (event, d) => {
-            d3.select(event.target)
-                .attr("fill", "orange");
-        })
-        .on("mouseout", (event, d) => {
-            d3.select(event.target)
-                .attr("fill", color(d.storeClass));
-        });
+    classes.forEach((storeClass, index) => {
+        barGroups.append("rect")
+            .attr("class", "bar")
+            .attr("x", 0)
+            .attr("y", d => y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
+            .attr("width", x.bandwidth())
+            .attr("height", d => y(d3.sum(classes.slice(0, index).map(c => d[c] || 0))) - y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
+            .attr("fill", color(storeClass))
+            .on("mouseover", (event, d) => {
+                const value = d[storeClass] || 0;
+                tooltip.style("visibility", "visible")
+                    .html(`
+                        <strong>City:</strong> ${d.city}<br>
+                        <strong>Class:</strong> ${storeClass}<br>
+                        <strong>Count:</strong> ${value}
+                    `);
+            })
+            .on("mousemove", event => {
+                tooltip.style("top", `${event.pageY + 10}px`).style("left", `${event.pageX + 10}px`);
+            })
+            .on("mouseout", () => {
+                tooltip.style("visibility", "hidden");
+            });
+    });
 
     // Add legend
     const legend = svg.append("g")
         .attr("transform", `translate(${width + 20}, 0)`);
 
-    groupedData.forEach((d, i) => {
+    classes.forEach((storeClass, i) => {
         legend.append("rect")
             .attr("x", 0)
             .attr("y", i * 20)
             .attr("width", 15)
             .attr("height", 15)
-            .attr("fill", color(d.storeClass));
+            .attr("fill", color(storeClass));
 
         legend.append("text")
             .attr("x", 20)
             .attr("y", i * 20 + 12)
             .style("font-size", "12px")
-            .text(d.storeClass);
+            .text(storeClass);
     });
 }).catch(error => {
     console.error("Error loading CSV:", error);
