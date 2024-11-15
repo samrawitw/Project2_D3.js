@@ -28,6 +28,9 @@ const tooltip = d3.select("body")
 
 // Load and process CSV data
 d3.csv("js/data/HM_all_stores.csv").then(data => {
+    // Log unique storeClass values for debugging
+    console.log("Unique store classes:", Array.from(new Set(data.map(d => d.storeClass))));
+
     // Filter out unexpected store classes
     data = data.filter(d => Object.keys(colorMap).includes(d.storeClass));
 
@@ -45,11 +48,15 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .sort((a, b) => b.totalStores - a.totalStores) // Sort by total number of stores
         .slice(0, 10); // Take top 10 cities
 
+    console.log("Grouped Data:", groupedData);
+
     // Flatten data for stacking
     const flattenedData = groupedData.map(d => ({
         city: d.city,
         ...Object.fromEntries(d.counts.map(c => [c.storeClass, c.count]))
     }));
+
+    console.log("Flattened Data:", flattenedData);
 
     // Get unique store classes
     const classes = Object.keys(colorMap);
