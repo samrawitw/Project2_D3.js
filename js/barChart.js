@@ -1,7 +1,7 @@
 // Set SVG dimensions
 const margin = { top: 50, right: 200, bottom: 70, left: 70 },
-      width = 800 - margin.left - margin.right,
-      height = 500 - margin.top - margin.bottom;
+    width = 800 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
 
 // Append SVG group element
 const svg = d3.select("svg")
@@ -28,8 +28,11 @@ const tooltip = d3.select("body")
 
 // Load and process CSV data
 d3.csv("js/data/HM_all_stores.csv").then(data => {
-    // Filter out unexpected store classes
-    data = data.filter(d => Object.keys(colorMap).includes(d.storeClass));
+    // Normalize and filter data
+    data = data.map(d => {
+        d.storeClass = d.storeClass.trim(); // Ensure consistent storeClass values
+        return d;
+    }).filter(d => Object.keys(colorMap).includes(d.storeClass));
 
     // Group data by city and count the number of stores per class in each city
     const groupedData = d3.groups(data, d => d.city)
@@ -50,6 +53,9 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         city: d.city,
         ...Object.fromEntries(d.counts.map(c => [c.storeClass, c.count]))
     }));
+
+    // Debugging logs
+    console.log("Flattened Data:", flattenedData);
 
     // Get unique store classes
     const classes = Object.keys(colorMap);
@@ -127,25 +133,6 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .attr("text-anchor", "middle")
         .style("font-size", "12px")
         .text(d => d3.sum(classes.map(c => d[c] || 0)));
-
-    // Add legend
-    const legend = svg.append("g")
-        .attr("transform", `translate(${width + 20}, 0)`);
-
-    classes.forEach((storeClass, i) => {
-        legend.append("rect")
-            .attr("x", 0)
-            .attr("y", i * 20)
-            .attr("width", 15)
-            .attr("height", 15)
-            .attr("fill", colorMap[storeClass]);
-
-        legend.append("text")
-            .attr("x", 20)
-            .attr("y", i * 20 + 12)
-            .style("font-size", "12px")
-            .text(storeClass);
-    });
 }).catch(error => {
     console.error("Error loading CSV:", error);
 });
