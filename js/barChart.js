@@ -5,6 +5,7 @@ const margin = { top: 50, right: 200, bottom: 70, left: 70 },
 
 // Append SVG group element
 const svg = d3.select("svg")
+    .attr("viewBox", `0 0 800 600`) // Makes the chart responsive
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -68,7 +69,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .padding(0.3);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(flattenedData, d => d3.sum(classes.map(c => d[c] || 0)))])
+        .domain([0, d3.max(flattenedData, d => d3.sum(classes.map(c => d[c] || 0)))]).nice()
         .range([height, 0]);
 
     // Add axes
@@ -113,7 +114,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
             .attr("y", d => y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
             .attr("width", x.bandwidth())
             .attr("height", d => y(d3.sum(classes.slice(0, index).map(c => d[c] || 0))) - y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
-            .attr("fill", colorMap[storeClass]) // Explicitly map the color here
+            .attr("fill", colorMap[storeClass])
             .on("mouseover", (event, d) => {
                 const value = d[storeClass] || 0;
                 tooltip.style("visibility", "visible")
@@ -126,6 +127,15 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
                 tooltip.style("visibility", "hidden");
             });
     });
+
+    // Add labels for total stores
+    barGroups.append("text")
+        .attr("x", x.bandwidth() / 2)
+        .attr("y", d => y(d3.sum(classes.map(c => d[c] || 0))) - 5)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .style("fill", "#000")
+        .text(d => d3.sum(classes.map(c => d[c] || 0)));
 
     // Add legend
     const legend = svg.append("g")
@@ -145,6 +155,19 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
             .style("font-size", "12px")
             .text(storeClass);
     });
+
+    // Add filter buttons
+    const buttons = d3.select("body").append("div").attr("class", "filters");
+
+    buttons.selectAll("button")
+        .data(classes)
+        .enter()
+        .append("button")
+        .text(d => `Show Only ${d}`)
+        .on("click", storeClass => {
+            const filteredData = data.filter(d => d.storeClass === storeClass);
+            console.log("Filtered Data:", filteredData);
+        });
 }).catch(error => {
     console.error("Error loading CSV:", error);
 });
