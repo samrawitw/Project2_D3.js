@@ -1,5 +1,5 @@
 // Set SVG dimensions
-const margin = { top: 50, right: 200, bottom: 70, left: 70 },
+const margin = { top: 50, right: 70, bottom: 70, left: 70 },
     width = 800 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
@@ -30,9 +30,12 @@ const tooltip = d3.select("body")
 d3.csv("js/data/HM_all_stores.csv").then(data => {
     // Normalize and filter data
     data = data.map(d => {
-        d.storeClass = d.storeClass.trim(); // Ensure consistent storeClass values
+        d.storeClass = d.storeClass.trim(); // Trim whitespace
+        d.storeClass = d.storeClass.charAt(0).toUpperCase() + d.storeClass.slice(1).toLowerCase(); // Normalize case
         return d;
     }).filter(d => Object.keys(colorMap).includes(d.storeClass));
+
+    console.log("Filtered data:", data); // Debugging
 
     // Group data by city and count the number of stores per class in each city
     const groupedData = d3.groups(data, d => d.city)
@@ -48,14 +51,15 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .sort((a, b) => b.totalStores - a.totalStores) // Sort by total number of stores
         .slice(0, 10); // Take top 10 cities
 
+    console.log("Grouped data:", groupedData);
+
     // Flatten data for stacking
     const flattenedData = groupedData.map(d => ({
         city: d.city,
         ...Object.fromEntries(d.counts.map(c => [c.storeClass, c.count]))
     }));
 
-    // Debugging logs
-    console.log("Flattened Data:", flattenedData);
+    console.log("Flattened data:", flattenedData);
 
     // Get unique store classes
     const classes = Object.keys(colorMap);
@@ -112,7 +116,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
             .attr("y", d => y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
             .attr("width", x.bandwidth())
             .attr("height", d => y(d3.sum(classes.slice(0, index).map(c => d[c] || 0))) - y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
-            .attr("fill", colorMap[storeClass]) // Correct color mapping
+            .attr("fill", d => colorMap[storeClass]) // Correct color mapping
             .on("mouseover", (event, d) => {
                 const value = d[storeClass] || 0;
                 tooltip.style("visibility", "visible")
