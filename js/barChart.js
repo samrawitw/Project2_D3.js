@@ -1,16 +1,12 @@
-// Set SVG dimensions and make them responsive
+// Set SVG dimensions
 const margin = { top: 50, right: 200, bottom: 70, left: 70 },
       width = 800 - margin.left - margin.right,
       height = 500 - margin.top - margin.bottom;
 
-// Append a responsive SVG element
-const svg = d3.select("body")
-    .append("svg")
-    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
-    .attr("preserveAspectRatio", "xMinYMin meet")
+// Append SVG group element
+const svg = d3.select("svg")
     .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`)
-    .attr("aria-label", "Bar chart visualization of store data"); // Accessibility
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
 // Manual color mapping for store classes
 const colorMap = {
@@ -35,8 +31,8 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
     // Log unique storeClass values for debugging
     console.log("Unique store classes:", Array.from(new Set(data.map(d => d.storeClass))));
 
-    // Filter out unexpected store classes and validate data
-    data = data.filter(d => Object.keys(colorMap).includes(d.storeClass) && d.city && !isNaN(d.storeClass));
+    // Filter out unexpected store classes
+    data = data.filter(d => Object.keys(colorMap).includes(d.storeClass));
 
     // Group data by city and count the number of stores per class in each city
     const groupedData = d3.groups(data, d => d.city)
@@ -57,7 +53,6 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
     // Flatten data for stacking
     const flattenedData = groupedData.map(d => ({
         city: d.city,
-        totalStores: d.totalStores,
         ...Object.fromEntries(d.counts.map(c => [c.storeClass, c.count]))
     }));
 
@@ -73,7 +68,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .padding(0.3);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(flattenedData, d => d.totalStores)])
+        .domain([0, d3.max(flattenedData, d => d3.sum(classes.map(c => d[c] || 0)))])
         .range([height, 0]);
 
     // Add axes
@@ -119,16 +114,10 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
             .attr("width", x.bandwidth())
             .attr("height", d => y(d3.sum(classes.slice(0, index).map(c => d[c] || 0))) - y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
             .attr("fill", colorMap[storeClass]) // Explicitly map the color here
-            .attr("aria-label", d => `City: ${d.city}, Class: ${storeClass}, Count: ${d[storeClass] || 0}`) // Accessibility
             .on("mouseover", (event, d) => {
                 const value = d[storeClass] || 0;
                 tooltip.style("visibility", "visible")
-                    .html(`
-                        <strong>City:</strong> ${d.city}<br>
-                        <strong>Class:</strong> ${storeClass}<br>
-                        <strong>Count:</strong> ${value}<br>
-                        <strong>Total Stores:</strong> ${d.totalStores}
-                    `);
+                    .html(`City: ${d.city}<br>Class: ${storeClass}<br>Count: ${value}`);
             })
             .on("mousemove", event => {
                 tooltip.style("top", `${event.pageY + 10}px`).style("left", `${event.pageX + 10}px`);
