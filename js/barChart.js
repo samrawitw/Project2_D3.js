@@ -1,5 +1,5 @@
 // Set SVG dimensions
-const margin = { top: 50, right: 200, bottom: 100, left: 70 },
+const margin = { top: 50, right: 200, bottom: 70, left: 70 },
       width = 800 - margin.left - margin.right,
       height = 500 - margin.top - margin.bottom;
 
@@ -34,11 +34,8 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
                 stores,
                 v => v.length, // Count stores
                 d => d.storeClass // Group by storeClass
-            ).map(([storeClass, count]) => ({ storeClass, count })),
-            totalStores: stores.length
-        }))
-        .sort((a, b) => b.totalStores - a.totalStores) // Sort by total number of stores
-        .slice(0, 10); // Take top 10 cities
+            ).map(([storeClass, count]) => ({ storeClass, count }))
+        }));
 
     console.log("Grouped Data by City:", groupedData);
 
@@ -55,7 +52,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
 
     // Set scales
     const x = d3.scaleBand()
-        .domain(flattenedData.map(d => d.city)) // Top 10 cities for x-axis
+        .domain(flattenedData.map(d => d.city)) // Cities for x-axis
         .range([0, width])
         .padding(0.3);
 
@@ -80,7 +77,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .attr("y", height + margin.bottom - 20)
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
-        .text("Top 10 Cities");
+        .text("Cities");
 
     // Add Y-axis label
     svg.append("text")
