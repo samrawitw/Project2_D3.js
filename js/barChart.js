@@ -1,7 +1,7 @@
 // Set SVG dimensions
 const margin = { top: 50, right: 200, bottom: 70, left: 70 },
-    width = 800 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+      width = 800 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
 
 // Append SVG group element
 const svg = d3.select("svg")
@@ -28,9 +28,6 @@ const tooltip = d3.select("body")
 
 // Load and process CSV data
 d3.csv("js/data/HM_all_stores.csv").then(data => {
-    // Log unique storeClass values for debugging
-    console.log("Unique store classes:", Array.from(new Set(data.map(d => d.storeClass))));
-
     // Filter out unexpected store classes
     data = data.filter(d => Object.keys(colorMap).includes(d.storeClass));
 
@@ -48,15 +45,11 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .sort((a, b) => b.totalStores - a.totalStores) // Sort by total number of stores
         .slice(0, 10); // Take top 10 cities
 
-    console.log("Grouped Data:", groupedData);
-
     // Flatten data for stacking
     const flattenedData = groupedData.map(d => ({
         city: d.city,
         ...Object.fromEntries(d.counts.map(c => [c.storeClass, c.count]))
     }));
-
-    console.log("Flattened Data:", flattenedData);
 
     // Get unique store classes
     const classes = Object.keys(colorMap);
@@ -68,7 +61,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .padding(0.3);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(flattenedData, d => d3.sum(classes.map(c => d[c] || 0)))])
+        .domain([0, d3.max(flattenedData, d => d3.sum(classes.map(c => d[c] || 0)))]).nice()
         .range([height, 0]);
 
     // Add axes
@@ -113,7 +106,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
             .attr("y", d => y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
             .attr("width", x.bandwidth())
             .attr("height", d => y(d3.sum(classes.slice(0, index).map(c => d[c] || 0))) - y(d3.sum(classes.slice(0, index + 1).map(c => d[c] || 0))))
-            .attr("fill", colorMap[storeClass]) // Correctly assign color here
+            .attr("fill", colorMap[storeClass]) // Correct color mapping
             .on("mouseover", (event, d) => {
                 const value = d[storeClass] || 0;
                 tooltip.style("visibility", "visible")
@@ -126,6 +119,14 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
                 tooltip.style("visibility", "hidden");
             });
     });
+
+    // Add labels on top of bars for total stores
+    barGroups.append("text")
+        .attr("x", x.bandwidth() / 2)
+        .attr("y", d => y(d3.sum(classes.map(c => d[c] || 0))) - 5)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text(d => d3.sum(classes.map(c => d[c] || 0)));
 
     // Add legend
     const legend = svg.append("g")
