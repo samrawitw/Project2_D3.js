@@ -26,22 +26,25 @@ const tooltip = d3.select("body")
 d3.csv("js/data/HM_all_stores.csv").then(data => {
     console.log("Data loaded:", data);
 
-    // Group data by city and count the number of stores per class in each city
-    const groupedData = d3.groups(data, d => d.city)
-        .map(([city, stores]) => ({
-            city,
+    // Group data by country and count the number of stores per class in each country
+    const groupedData = d3.groups(data, d => d.country)
+        .map(([country, stores]) => ({
+            country,
             counts: d3.rollups(
                 stores,
                 v => v.length, // Count stores
                 d => d.storeClass // Group by storeClass
-            ).map(([storeClass, count]) => ({ storeClass, count }))
-        }));
+            ).map(([storeClass, count]) => ({ storeClass, count })),
+            totalStores: stores.length
+        }))
+        .sort((a, b) => b.totalStores - a.totalStores) // Sort by total number of stores
+        .slice(0, 10); // Take top 10 countries
 
-    console.log("Grouped Data by City:", groupedData);
+    console.log("Grouped Data by Country:", groupedData);
 
     // Flatten data for stacking
     const flattenedData = groupedData.map(d => ({
-        city: d.city,
+        country: d.country,
         ...Object.fromEntries(d.counts.map(c => [c.storeClass, c.count]))
     }));
 
@@ -52,7 +55,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
 
     // Set scales
     const x = d3.scaleBand()
-        .domain(flattenedData.map(d => d.city)) // Cities for x-axis
+        .domain(flattenedData.map(d => d.country)) // Top 10 countries for x-axis
         .range([0, width])
         .padding(0.3);
 
@@ -77,7 +80,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .attr("y", height + margin.bottom - 20)
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
-        .text("Cities");
+        .text("Top 10 Countries");
 
     // Add Y-axis label
     svg.append("text")
@@ -93,7 +96,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
         .data(flattenedData)
         .enter()
         .append("g")
-        .attr("transform", d => `translate(${x(d.city)}, 0)`);
+        .attr("transform", d => `translate(${x(d.country)}, 0)`);
 
     classes.forEach((storeClass, index) => {
         barGroups.append("rect")
@@ -107,7 +110,7 @@ d3.csv("js/data/HM_all_stores.csv").then(data => {
                 const value = d[storeClass] || 0;
                 tooltip.style("visibility", "visible")
                     .html(`
-                        <strong>City:</strong> ${d.city}<br>
+                        <strong>Country:</strong> ${d.country}<br>
                         <strong>Class:</strong> ${storeClass}<br>
                         <strong>Count:</strong> ${value}
                     `);
